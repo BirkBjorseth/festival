@@ -22,12 +22,14 @@ export default function NavBar() {
   }
 
   return (
-    <Navbar isBordered className="px-6 py-3 bg-[var(--background)] text-[var(--foreground)] shadow-lg">
+    <Navbar isBordered className="px-6 py-3 bg-[var(--background)] text-[var(--foreground)] shadow-lg flex justify-between items-center">
+      {/* Logo */}
       <NavbarBrand>
         <p className="font-bold text-xl text-[var(--foreground)] tracking-wide">Hardstyle</p>
       </NavbarBrand>
 
-      <NavbarContent className="hidden sm:flex gap-6">
+      {/* Meny (Hjem, Festivaler) */}
+      <NavbarContent className="flex gap-6">
         <NavbarItem>
           <Link href="/" className="text-lg text-[var(--foreground)] hover:text-gray-600 transition">
             Hjem
@@ -40,8 +42,8 @@ export default function NavBar() {
         </NavbarItem>
       </NavbarContent>
 
-      {/* Brukermeny */}
-      <NavbarContent className="ml-auto relative">
+      {/* Brukermeny (logg inn/logg ut) */}
+      <NavbarContent className="ml-auto">
         {user ? (
           <div className="relative">
             <button onClick={() => setMenuOpen(!menuOpen)} className="bg-gray-200 text-[var(--foreground)] px-4 py-2 rounded-full hover:bg-gray-300 transition">
