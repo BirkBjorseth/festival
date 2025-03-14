@@ -1,25 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { onAuthStateChanged, signOut, User } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { useSession, signOut } from "next-auth/react"
 import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button } from "@heroui/react"
+import { useState, useEffect, useRef } from "react"
 
 export default function NavBar() {
-  const [user, setUser] = useState<User | null>(null)
+  const { data: session, status } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Lytt etter sesjonens status, og sett isLoading til false når sesjonen er klar
+  useEffect(() => {
+    if (status !== "loading") {
+      setIsLoading(false)
+    }
+  }, [status])
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser)
-    })
-    return () => unsubscribe()
-  }, [])
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
 
-  const handleLogout = async () => {
-    await signOut(auth)
-    setUser(null)
-  }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   return (
     <Navbar isBordered className="px-6 py-3 bg-[var(--background)] text-[var(--foreground)] shadow-lg flex justify-between items-center">
@@ -44,15 +53,16 @@ export default function NavBar() {
 
       {/* Brukermeny (logg inn/logg ut) */}
       <NavbarContent className="ml-auto">
-        {user ? (
+        {isLoading ? (
+          <p>Loading...</p> // Placeholder under lasting
+        ) : session ? (
           <div className="relative">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="bg-gray-200 text-[var(--foreground)] px-4 py-2 rounded-full hover:bg-gray-300 transition">
-              {user.displayName || user.email}
+            <button className="bg-gray-200 text-[var(--foreground)] px-4 py-2 rounded-full hover:bg-gray-300 transition" onClick={() => setMenuOpen((prev) => !prev)}>
+              {session.user?.name || session.user?.email}
             </button>
-
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-white text-[var(--foreground)] rounded-md shadow-lg py-2 border">
-                <button onClick={handleLogout} className="block w-full text-left px-4 py-2 hover:bg-red-500 hover:text-white transition">
+              <div ref={menuRef} className="absolute right-0 mt-2 w-40 bg-white text-[var(--foreground)] rounded-md shadow-lg py-2 border">
+                <button onClick={() => signOut()} className="block w-full text-left px-4 py-2 hover:bg-red-500 hover:text-white transition">
                   Logg ut
                 </button>
               </div>

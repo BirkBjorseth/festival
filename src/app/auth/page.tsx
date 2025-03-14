@@ -1,66 +1,52 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { registerUser, loginUser, signInWithGoogle } from "@/lib/auth"
-import { FaGoogle } from "react-icons/fa"
+import { useState } from "react"
+import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { onAuthStateChanged } from "firebase/auth"
-import { auth } from "@/lib/firebase"
 
 export default function AuthPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [username, setUsername] = useState("") // Kun for registrering
+  const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false) // Bytt mellom login/registrering
+  const [isRegistering, setIsRegistering] = useState(false)
   const router = useRouter()
 
-  // Hvis brukeren er logget inn, redirect til hjem-siden
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) router.push("/")
+  const handleLogin = async () => {
+    setError(null)
+    setLoading(true)
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
     })
-    return () => unsubscribe()
-  }, [router])
+    if (result?.error) {
+      setError("Feil e-post eller passord.")
+    } else {
+      router.push("/")
+    }
+    setLoading(false)
+  }
 
-  // ✅ Registrer bruker
   const handleRegister = async () => {
     setError(null)
     setLoading(true)
     try {
-      await registerUser(email, password, username)
-      router.push("/") // Redirect til hjem-siden etter registrering
-    } catch (err) {
-      console.error("Feil ved registrering:", err)
-      setError("Feil ved registrering. Sjekk at e-post og passord er korrekt.")
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password }),
+      })
+      if (!res.ok) throw new Error("Kunne ikke registrere bruker")
+
+      await handleLogin()
+    } catch {
+      setError("Feil ved registrering. Sjekk at e-post ikke er i bruk.")
     }
     setLoading(false)
-  }
-
-  // ✅ Logg inn bruker
-  const handleLogin = async () => {
-    setError(null)
-    setLoading(true)
-    try {
-      await loginUser(email, password)
-      router.push("/") // Redirect til hjem-siden etter innlogging
-    } catch (err) {
-      console.error("Feil ved innlogging:", err)
-      setError("Feil ved innlogging. Sjekk e-post og passord.")
-    }
-    setLoading(false)
-  }
-
-  // ✅ Google Log-In
-  const handleGoogleSignIn = async () => {
-    try {
-      await signInWithGoogle()
-      router.push("/") // Redirect til hjem-siden etter Google-login
-    } catch (error) {
-      console.error("Feil ved Google Sign-In:", error)
-      setError("Feil ved Google Sign-In.")
-    }
   }
 
   return (
@@ -68,8 +54,8 @@ export default function AuthPage() {
       <div className="bg-gray-100 p-8 rounded-lg shadow-lg w-80">
         <h1 className="text-2xl font-bold mb-4 text-center">{isRegistering ? "Registrer deg" : "Logg inn"}</h1>
 
-        {/* Brukernavn-felt for registrering */}
-        {isRegistering && <input type="text" placeholder="Brukernavn" className="mb-3 p-2 border rounded w-full text-black" value={username} onChange={(e) => setUsername(e.target.value)} />}
+        {/* Navn-felt for registrering */}
+        {isRegistering && <input type="text" placeholder="Navn" className="mb-3 p-2 border rounded w-full text-black" value={name} onChange={(e) => setName(e.target.value)} />}
 
         {/* E-post og passord */}
         <input type="email" placeholder="E-post" className="mb-3 p-2 border rounded w-full text-black" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -84,33 +70,20 @@ export default function AuthPage() {
           {loading ? "Laster..." : isRegistering ? "Registrer" : "Logg inn"}
         </button>
 
-        {/* Feilmelding */}
         {error && <p className="text-red-500 mt-2 text-center">{error}</p>}
-
-        {/* Horisontal avskillelse */}
-        <div className="w-full flex items-center my-4">
-          <hr className="flex-grow border-t border-gray-300" />
-          <span className="mx-2 text-gray-500">eller</span>
-          <hr className="flex-grow border-t border-gray-300" />
-        </div>
-
-        {/* Google Login-knapp */}
-        <button onClick={handleGoogleSignIn} className="flex items-center justify-center w-full border p-2 rounded-md shadow-md hover:bg-gray-200 transition">
-          <FaGoogle className="mr-2 text-red-500" /> Logg inn med Google
-        </button>
 
         {/* Bytte mellom login og registrering */}
         <p className="mt-4 text-center">
           {isRegistering ? (
             <>
-              Har du allerede en bruker?{" "}
+              Har du allerede en konto?{" "}
               <span className="text-blue-500 cursor-pointer underline" onClick={() => setIsRegistering(false)}>
                 Logg inn her
               </span>
             </>
           ) : (
             <>
-              Har du ikke en bruker?{" "}
+              Har du ikke en konto?{" "}
               <span className="text-blue-500 cursor-pointer underline" onClick={() => setIsRegistering(true)}>
                 Registrer deg her
               </span>
